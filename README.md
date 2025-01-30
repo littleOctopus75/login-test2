@@ -187,14 +187,3 @@ POST /api/auth/reset-password
 }
 ```
 
----
-
-## 📞 Soporte
-Si tienes dudas o problemas, **abre un issue en GitHub** o contáctame en:
-📧 **Email:** tu-email@example.com  
-🌐 **GitHub:** [https://github.com/tu-usuario](https://github.com/tu-usuario)  
-
----
-
-## 🎉 **¡Listo! Ahora cualquier persona puede instalar y ejecutar el proyecto sin problemas.** 🚀🔥
-
