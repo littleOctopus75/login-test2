@@ -8,14 +8,37 @@ const router = useRouter();
 
 const newPassword = ref('');
 const confirmPassword = ref('');
+const oldPassword = ref(''); // Se recibirá desde la API
 const message = ref('');
 const errorMessage = ref('');
 const token = ref('');
 const loading = ref(false);
 
-onMounted(() => {
+onMounted(async () => {
     token.value = route.query.token || '';
+
+    // 🔹 Aquí deberías hacer una petición para obtener la contraseña anterior desde la API
+    try {
+        const response = await api.get(`/get-old-password?token=${token.value}`);
+        oldPassword.value = response.data.oldPassword; // Guardamos la contraseña antigua para compararla
+    } catch (error) {
+        console.error('Error al obtener la contraseña anterior', error);
+    }
 });
+
+// Función para verificar que la nueva contraseña sea diferente de la anterior
+const isDifferentEnough = (oldPass, newPass) => {
+    if (oldPass === newPass) return false; // No puede ser igual
+
+    let diffCount = 0;
+    for (let i = 0; i < newPass.length; i++) {
+        if (oldPass[i] !== newPass[i]) {
+            diffCount++;
+        }
+        if (diffCount >= 2) return true; // Al menos 2 caracteres diferentes
+    }
+    return false;
+};
 
 const resetPassword = async () => {
     if (!token.value) {
@@ -25,6 +48,11 @@ const resetPassword = async () => {
 
     if (newPassword.value !== confirmPassword.value) {
         errorMessage.value = 'Las contraseñas no coinciden.';
+        return;
+    }
+
+    if (!isDifferentEnough(oldPassword.value, newPassword.value)) {
+        errorMessage.value = 'La nueva contraseña debe ser diferente de la anterior con al menos dos caracteres distintos.';
         return;
     }
 
@@ -52,7 +80,7 @@ const resetPassword = async () => {
         <div class="reset-box">
             <h2>Restablecer Contraseña</h2>
             <p class="instructions">
-                Ingresa una nueva contraseña y confírmala para continuar.
+                Ingresa una nueva contraseña y confírmala. No puedes usar tu contraseña anterior.
             </p>
             <input v-model="newPassword" placeholder="Nueva Contraseña" type="password" class="input-field" />
             <input v-model="confirmPassword" placeholder="Confirmar Contraseña" type="password" class="input-field" />

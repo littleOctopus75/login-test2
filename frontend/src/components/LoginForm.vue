@@ -1,5 +1,5 @@
 <script setup>
-import { ref } from 'vue';
+import { ref, onMounted } from 'vue';
 import { useAuthStore } from '../store/authStore';
 import { useRouter } from 'vue-router';
 
@@ -10,14 +10,69 @@ const email = ref('');
 const password = ref('');
 const errorMessage = ref('');
 
+// Función para establecer el token y tiempo de expiración (5 minutos)
+const setSession = (token, user) => {
+    const expirationTime = new Date().getTime() + 5 * 60 * 1000; // 5 minutos en milisegundos
+    localStorage.setItem('authToken', token);
+    localStorage.setItem('authExpiration', expirationTime);
+    localStorage.setItem('userData', JSON.stringify({
+        email: user.email, // Correo del usuario
+        password: user.password // Contraseña hasheada
+    }));
+};
+
+// Función para verificar si la sesión sigue activa
+const checkSession = () => {
+    const token = localStorage.getItem('authToken');
+    const expirationTime = localStorage.getItem('authExpiration');
+
+    if (token && expirationTime) {
+        const currentTime = new Date().getTime();
+        if (currentTime > expirationTime) {
+            logout(); // Expiró la sesión, eliminar datos y redirigir al login
+        } else {
+            authStore.setToken(token); // Si es válido, mantener la sesión
+            router.push('/dashboard'); // Redirigir al dashboard si está autenticado
+        }
+    }
+};
+
+// Función para cerrar sesión
+const logout = () => {
+    localStorage.removeItem('authToken');
+    localStorage.removeItem('authExpiration');
+    localStorage.removeItem('userData');
+    authStore.logout();
+    router.push('/login');
+};
+
+// Función de login
 const login = async () => {
     try {
-        await authStore.login(email.value, password.value);
-        router.push('/dashboard');
+        const response = await authStore.login(email.value, password.value);
+        if (!response.user) {
+            throw new Error('Datos del usuario no disponibles.');
+        }
+        // 🔹 Guardamos el usuario en localStorage
+        const expirationTime = new Date().getTime() + 5 * 60 * 1000; // 5 minutos
+        localStorage.setItem('authToken', response.token);
+        localStorage.setItem('authExpiration', expirationTime);
+        localStorage.setItem('userData', JSON.stringify({
+            email: response.user.email, // Correo del usuario ✅
+            password: response.user.password // Contraseña hasheada
+        }));
+        await router.push('/dashboard');
+
+
     } catch (error) {
         errorMessage.value = error.message;
     }
 };
+
+// Verifica si la sesión sigue activa cuando se carga el componente
+onMounted(() => {
+    checkSession();
+});
 </script>
 
 <template>
@@ -29,13 +84,11 @@ const login = async () => {
             <button @click="login" class="login-button">Ingresar</button>
             <p v-if="errorMessage" class="error-message">{{ errorMessage }}</p>
 
-            <!-- 🔹 Nueva sección para registrarse -->
             <p class="register-text">
                 ¿No tienes una cuenta?
                 <RouterLink to="/register" class="register-link">Regístrate aquí</RouterLink>
             </p>
 
-            <!-- 🔗 Enlace para recuperar contraseña -->
             <RouterLink to="/forgot-password" class="forgot-password">¿Olvidaste tu contraseña?</RouterLink>
         </div>
     </div>
